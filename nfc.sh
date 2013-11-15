@@ -6,7 +6,7 @@ echo "25" > /sys/class/gpio/export
 echo "out" > /sys/class/gpio/gpio25/direction
 echo "1" > /sys/class/gpio/gpio25/value
 
-tone () {
+tone (){
   local note="$1" time="$2"
   if test "$note" -eq 0; then
     gpio -g mode 18 in
@@ -20,6 +20,44 @@ tone () {
   sleep "$time"
 }
 
+playxmas(){
+ tone 63 0.2
+ tone 63 0.2
+ tone 63 0.3
+ tone 0 0
+ tone 0 0
+ tone 0 0
+ tone 63 0.2
+ tone 63 0.2
+ tone 63 0.3
+ tone 0 0
+ tone 0 0
+ tone 0 0
+ tone 63 0.2
+ tone 65 0.2
+ tone 61 0.3
+ tone 62 0.1
+ tone 63 0.6
+ tone 0 0
+}
+
+playshave(){
+	tone 60 0.2
+	tone 55 0.1
+	tone 55 0.1
+	tone 57 0.2
+	tone 55 0.2
+	tone 0 0.2
+	tone 59 0.2
+	tone 60 0.2
+	tone 0 0
+}
+
+beep(){
+	tone 107 0.2
+	tone 0 0
+
+}
 enterdb(){
 	sqlite3 $DB "INSERT INTO Entry VALUES('$output', strftime('%s','now'));"
 	Name=$(sqlite3 $DB "SELECT Name FROM AccessCards WHERE CardID='$output'")
@@ -41,8 +79,12 @@ while true
 	output=$(sudo /home/pi/nfc-poll 2>/dev/null|grep UID|awk '{print $3,$4,$5,$6}'|sed 's/ //g')
 	AllowAccess=$(sqlite3 $DB "SELECT AllowAccess FROM AccessCards WHERE CardID='$output'")
 	if [ $AllowAccess = "yes" ] ; then
-		tone 107 0.2
-		tone 0 0
+		month=$(date +%m)
+		if [ $month = "12" ]; then
+			playxmas
+		else
+			beep
+		fi
 		unlockdoor
 		enterdb
 		sleep 4
