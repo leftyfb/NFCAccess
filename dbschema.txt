@@ -1,0 +1,11 @@
+BEGIN TRANSACTION;
+CREATE TABLE AccessCards(CardID text primary key, Name text, AllowAccess text);
+INSERT INTO AccessCards VALUES('aaaaaaaa','John Smith','yes');
+INSERT INTO AccessCards VALUES('bbbbbbbb','Jane Smith','yes');
+INSERT INTO AccessCards VALUES('cccccccc','Temporary Guest','no');
+COMMIT;
+
+BEGIN TRANSACTION;
+CREATE TABLE Entry(CardID integer, Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP);
+COMMIT;
+
