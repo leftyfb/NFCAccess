@@ -66,26 +66,36 @@ beep(){
 
 }
 enterdb(){
+	# insert cardID and timestamp into sqlite database
 	sqlite3 $DB "INSERT INTO Entry VALUES('$output', strftime('%s','now'));"
+	# get Name from sqlite database from the CardID
 	Name=$(sqlite3 $DB "SELECT Name FROM AccessCards WHERE CardID='$output'")
+	# get the TIMESTAMP(in epoch format) from the databbase so we can output on the screen the time the card was swiped
 	time=$(sqlite3 $DB "SELECT TIMESTAMP FROM Entry WHERE CardID='$output' ORDER BY TIMESTAMP DESC limit 1")
+	# covert epoch TIMESTAMP to human readable form
 	dtime=$(date -d @$time)
 	echo $dtime $Name entered
 }
 
 unlockdoor(){
+	# unlock door
 	echo "0" > /sys/class/gpio/gpio25/value
+	# turn on green LED
 	echo "1" > /sys/class/gpio/gpio22/value
 }
 
 lockdoor(){
+	# lock door
 	echo "1" > /sys/class/gpio/gpio25/value
+	# turn on green LED
 	echo "0" > /sys/class/gpio/gpio22/value
 }
 
 while true
 	do 
+	# read from NFC/RFID reader
 	output=$(nfc-poll 2>/dev/null|grep UID|awk '{print $3,$4,$5,$6}'|sed 's/ //g')
+	# lookup CardID access rights in sqlite database
 	AllowAccess=$(sqlite3 $DB "SELECT AllowAccess FROM AccessCards WHERE CardID='$output'")
 	if [ $AllowAccess = "yes" ] ; then
 		month=$(date +%m)
@@ -99,8 +109,10 @@ while true
 		sleep 4
 		lockdoor
 	elif [ $AllowAccess = "no" ] ; then
+		# turn on red LED
 		echo "1" > /sys/class/gpio/gpio23/value
 		beep
+		# turn off red LED
 		echo "0" > /sys/class/gpio/gpio23/value
 		echo "$(enterdb) but does not have access"
 		sleep 1
@@ -108,8 +120,10 @@ while true
 		continue
 	else
 		echo $(date) $output
+		# turn on red LED
 		echo "1" > /sys/class/gpio/gpio23/value
 		beep
+		# turn off red LED
 		echo "0" > /sys/class/gpio/gpio23/value
 		sleep 1
 	fi
