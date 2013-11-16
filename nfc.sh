@@ -110,11 +110,12 @@ while true
 		if [ -z $CardExists ] ;then
 			echo "Adding new card $output with name \"newcard\" and no access"
 			# Blink Red then Green LED's
-			beep
+			#beep
 			echo "1" > /sys/class/gpio/gpio23/value
 			sleep 0.2
 			echo "0" > /sys/class/gpio/gpio23/value
-			sleep 0.3
+			#sleep 0.3
+			beep
 			echo "1" > /sys/class/gpio/gpio22/value
 			sleep 0.2
 			echo "0" > /sys/class/gpio/gpio22/value
@@ -175,8 +176,13 @@ while true
 	else
 		echo $(date) $output
 		# Beep and blink red LED
-		echo "1" > /sys/class/gpio/gpio23/value
 		beep
+		echo "1" > /sys/class/gpio/gpio23/value
+		sleep 0.1
+		echo "0" > /sys/class/gpio/gpio23/value
+		sleep 0.2
+		echo "1" > /sys/class/gpio/gpio23/value
+		sleep 0.1
 		echo "0" > /sys/class/gpio/gpio23/value
 		sleep 1
 	fi
