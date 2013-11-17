@@ -1,4 +1,5 @@
-[ ] Hours of the Day access
+[✓] Hours of the Day access
+[✓] Day of the week access
 [ ] Time allotted access
 [✓] Different tones for different access/errors/holidays
 [✓] LED light
