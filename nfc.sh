@@ -1,6 +1,8 @@
 #!/bin/bash
 
-DB=frontdoor.db
+runfile=/var/run/nfc
+DB=/home/pi/NFCAccess/frontdoor.db
+gpio=/usr/local/bin/gpio
 
 # switch GPIO 4
 # RED LED GPIO 22
@@ -35,13 +37,13 @@ red_off(){
 
 unlock(){
 	# unlock 
-	echo "0" > /sys/class/gpio/gpio25/value
+	echo "1" > /sys/class/gpio/gpio25/value
 	green_on
 }
 
 lock(){
 	# lock 
-	echo "1" > /sys/class/gpio/gpio25/value
+	echo "0" > /sys/class/gpio/gpio25/value
 	green_off
 }
 #Make sure lock is enabled on startup
@@ -50,13 +52,13 @@ lock
 tone (){
   local note="$1" time="$2"
   if test "$note" -eq 0; then
-    gpio -g mode 18 in
+    $gpio -g mode 18 in
   else
     local period="$(perl -e"printf'%.0f',600000/440/2**(($note-69)/12)")"
-    gpio -g mode 18 pwm
-    gpio pwmr "$((period))"
-    gpio -g pwm 18 "$((period/2))"
-    gpio pwm-ms
+    $gpio -g mode 18 pwm
+    $gpio pwmr "$((period))"
+    $gpio -g pwm 18 "$((period/2))"
+    $gpio pwm-ms
   fi
   sleep "$time"
 }
@@ -111,8 +113,15 @@ enterdb(){
 	echo $dtime $Name
 }
 
-while true
+echo "1" > $runfile
+runstat=$(cat $runfile)
+
+#beep to signify it's ready
+beep
+
+while [ "$runstat" = "1" ]
 	do 
+	runstat=$(cat $runfile)
 	DOW=$(date +%u)
 	Hour=$(date +%H)
 	# read from NFC/RFID reader
