@@ -116,7 +116,7 @@ while true
 			# Blink Red then Green LED's
 			echo "1" > /sys/class/gpio/gpio23/value
 			# Add new card
-			sqlite3 $DB "INSERT INTO AccessCards VALUES('$output','newcard','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0');"
+			sqlite3 $DB "INSERT INTO AccessCards VALUES('$output','newcard','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0');"
 			sleep 0.2
 			echo "0" > /sys/class/gpio/gpio23/value
 			sleep 0.3
@@ -129,7 +129,7 @@ while true
 			if [[ $CheckDOW = "0" ]] || [[ $CheckHour = "0" ]]; then
 				echo "enabling access for $Name"
 				echo "1" > /sys/class/gpio/gpio22/value
-				for i in `seq -w 0 24`;do sqlite3 $DB "UPDATE AccessCards SET Hour$i='1' WHERE CardID='$output';";done
+				for i in `seq -w 0 23`;do sqlite3 $DB "UPDATE AccessCards SET Hour$i='1' WHERE CardID='$output';";done
 				for i in `seq -w 1 7`;do sqlite3 $DB "UPDATE AccessCards SET DOW$i='1' WHERE CardID='$output';";done
 				echo "0" > /sys/class/gpio/gpio22/value
 				sleep 0.3
@@ -139,7 +139,7 @@ while true
 			elif [[ $CheckDOW = "1" ]] && [[ $CheckHour = "1" ]]; then
 				echo "disabling access for $Name"
 				echo "1" > /sys/class/gpio/gpio22/value
-				for i in `seq -w 0 24`;do sqlite3 $DB "UPDATE AccessCards SET Hour$i='0' WHERE CardID='$output';";done
+				for i in `seq -w 0 23`;do sqlite3 $DB "UPDATE AccessCards SET Hour$i='0' WHERE CardID='$output';";done
 				for i in `seq -w 1 7`;do sqlite3 $DB "UPDATE AccessCards SET DOW$i='0' WHERE CardID='$output';";done
 				echo "0" > /sys/class/gpio/gpio22/value
 				sleep 0.3
@@ -148,8 +148,6 @@ while true
 				echo "0" > /sys/class/gpio/gpio23/value
 			fi
 		fi
-		#output=""
-		#return
 		switch=1
 	elif [ $switch = "0" ];then
 
