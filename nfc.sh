@@ -114,81 +114,79 @@ while true
 		if [ -z $CardExists ] ;then
 			echo "Adding new card $output with name \"newcard\" and no access"
 			# Blink Red then Green LED's
-			#beep
 			echo "1" > /sys/class/gpio/gpio23/value
+			# Add new card
+			sqlite3 $DB "INSERT INTO AccessCards VALUES('$output','newcard','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0');"
 			sleep 0.2
 			echo "0" > /sys/class/gpio/gpio23/value
-			#sleep 0.3
+			sleep 0.3
 			beep
 			echo "1" > /sys/class/gpio/gpio22/value
 			sleep 0.2
 			echo "0" > /sys/class/gpio/gpio22/value
-			# Add new card
-			sqlite3 $DB "INSERT INTO AccessCards VALUES('$output','newcard','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0');"
 		elif [ -n $CardExists ]; then
 			Name=$(sqlite3 $DB "SELECT Name FROM AccessCards WHERE CardID='$output'")
 			if [[ $CheckDOW = "0" ]] || [[ $CheckHour = "0" ]]; then
 				echo "enabling access for $Name"
 				echo "1" > /sys/class/gpio/gpio22/value
-				sleep 0.2
+				for i in `seq -w 0 24`;do sqlite3 $DB "UPDATE AccessCards SET Hour$i='1' WHERE CardID='$output';";done
+				for i in `seq -w 1 7`;do sqlite3 $DB "UPDATE AccessCards SET DOW$i='1' WHERE CardID='$output';";done
 				echo "0" > /sys/class/gpio/gpio22/value
 				sleep 0.3
 				echo "1" > /sys/class/gpio/gpio22/value
 				sleep 0.2
 				echo "0" > /sys/class/gpio/gpio22/value
-				for i in `seq -w 0 24`;do sqlite3 $DB "UPDATE AccessCards SET Hour$i='1' WHERE CardID='$output';";done
-				for i in `seq -w 1 7`;do sqlite3 $DB "UPDATE AccessCards SET DOW$i='1' WHERE CardID='$output';";done
 			elif [[ $CheckDOW = "1" ]] && [[ $CheckHour = "1" ]]; then
 				echo "disabling access for $Name"
 				echo "1" > /sys/class/gpio/gpio22/value
-				sleep 0.2
+				for i in `seq -w 0 24`;do sqlite3 $DB "UPDATE AccessCards SET Hour$i='0' WHERE CardID='$output';";done
+				for i in `seq -w 1 7`;do sqlite3 $DB "UPDATE AccessCards SET DOW$i='0' WHERE CardID='$output';";done
 				echo "0" > /sys/class/gpio/gpio22/value
 				sleep 0.3
 				echo "1" > /sys/class/gpio/gpio23/value
 				sleep 0.2
 				echo "0" > /sys/class/gpio/gpio23/value
-				for i in `seq -w 0 24`;do sqlite3 $DB "UPDATE AccessCards SET Hour$i='0' WHERE CardID='$output';";done
-				for i in `seq -w 1 7`;do sqlite3 $DB "UPDATE AccessCards SET DOW$i='0' WHERE CardID='$output';";done
 			fi
 		fi
-		output=""
+		#output=""
 		#return
-	fi
+		switch=1
+	elif [ $switch = "0" ];then
 
-	# lookup CardID access rights in sqlite database
-	if [[ $CheckDOW = "1" ]] && [[ $CheckHour = "1" ]]; then
-		month=$(date +%m)
-		if [ $month = "12" ]; then
-			playxmas
-		else
+		# lookup CardID access rights in sqlite database
+		if [[ $CheckDOW = "1" ]] && [[ $CheckHour = "1" ]]; then
+			month=$(date +%m)
+			if [ $month = "12" ]; then
+				playxmas
+			else
+				beep
+			fi
+			unlockdoor
+			enterdb
+			sleep 4
+			lockdoor
+		elif [[ $CheckDOW = "0" ]] || [[ $CheckHour = "0" ]]; then
+			# turn on red LED
+			echo "1" > /sys/class/gpio/gpio23/value
 			beep
+			# turn off red LED
+			echo "0" > /sys/class/gpio/gpio23/value
+			echo "$(enterdb) Access Denied"
+			sleep 1
+		elif [ -z $output ]; then
+			continue
+		else
+			echo $(date) $output
+			# Beep and blink red LED
+			beep
+			echo "1" > /sys/class/gpio/gpio23/value
+			sleep 0.1
+			echo "0" > /sys/class/gpio/gpio23/value
+			sleep 0.2
+			echo "1" > /sys/class/gpio/gpio23/value
+			sleep 0.1
+			echo "0" > /sys/class/gpio/gpio23/value
+			sleep 1
 		fi
-		unlockdoor
-		enterdb
-		sleep 4
-		lockdoor
-	elif [[ $CheckDOW = "0" ]] || [[ $CheckHour = "0" ]]; then
-		# turn on red LED
-		echo "1" > /sys/class/gpio/gpio23/value
-		beep
-		# turn off red LED
-		echo "0" > /sys/class/gpio/gpio23/value
-		echo "$(enterdb) but does not have access"
-		sleep 1
-	elif [ -z $output ]; then
-		continue
-	else
-		echo $(date) $output
-		# Beep and blink red LED
-		beep
-		echo "1" > /sys/class/gpio/gpio23/value
-		sleep 0.1
-		echo "0" > /sys/class/gpio/gpio23/value
-		sleep 0.2
-		echo "1" > /sys/class/gpio/gpio23/value
-		sleep 0.1
-		echo "0" > /sys/class/gpio/gpio23/value
-		sleep 1
 	fi
-
 done
