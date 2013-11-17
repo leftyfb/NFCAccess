@@ -1,24 +1,40 @@
 #!/bin/bash
 
 DB=frontdoor.db
-# switch GPIO
-echo "4" > /sys/class/gpio/unexport 2>/dev/null
-# RED LED GPIO
-echo "22" > /sys/class/gpio/unexport 2>/dev/null
-# BLUE LED GPIO
-echo "23" > /sys/class/gpio/unexport 2>/dev/null
-# RELAY/Door lock GPIO
-echo "25" > /sys/class/gpio/unexport 2>/dev/null
-echo "4" > /sys/class/gpio/export
-echo "22" > /sys/class/gpio/export
-echo "23" > /sys/class/gpio/export
-echo "25" > /sys/class/gpio/export
+
+# switch GPIO 4
+# RED LED GPIO 22
+# BLUE LED GPIO 23
+# RELAY/Door lock GPIO 25
+for i in 4 22 23 25 ; do echo "$i" > /sys/class/gpio/unexport 2>/dev/null ; echo "$i" > /sys/class/gpio/export ;done
+
 echo "in" > /sys/class/gpio/gpio22/direction
 echo "out" > /sys/class/gpio/gpio22/direction
 echo "out" > /sys/class/gpio/gpio23/direction
 echo "out" > /sys/class/gpio/gpio25/direction
-echo "1" > /sys/class/gpio/gpio25/value
 
+# turn on green LED
+green_on(){
+	echo "1" > /sys/class/gpio/gpio22/value
+}
+
+# turn off green LED
+green_off(){
+	echo "0" > /sys/class/gpio/gpio22/value
+}
+
+# turn on red LED
+red_on(){
+	echo "1" > /sys/class/gpio/gpio23/value
+}
+
+# turn on red LED
+red_off(){
+	echo "0" > /sys/class/gpio/gpio23/value
+}
+
+#Make sure lock is enabled on startup
+echo "1" > /sys/class/gpio/gpio25/value
 
 tone (){
   local note="$1" time="$2"
@@ -84,18 +100,16 @@ enterdb(){
 	echo $dtime $Name
 }
 
-unlockdoor(){
-	# unlock door
+unlock(){
+	# unlock 
 	echo "0" > /sys/class/gpio/gpio25/value
-	# turn on green LED
-	echo "1" > /sys/class/gpio/gpio22/value
+	green_on
 }
 
-lockdoor(){
-	# lock door
+lock(){
+	# lock 
 	echo "1" > /sys/class/gpio/gpio25/value
-	# turn off green LED
-	echo "0" > /sys/class/gpio/gpio22/value
+	green_off
 }
 
 while true
@@ -113,39 +127,38 @@ while true
 		CardExists=$(sqlite3 $DB "SELECT CardID FROM AccessCards WHERE CardID='$output'")
 		if [ -z $CardExists ] ;then
 			echo "Adding new card $output with name \"newcard\" and no access"
-			# Blink Red then Green LED's
-			echo "1" > /sys/class/gpio/gpio23/value
+			red_on
 			# Add new card
 			sqlite3 $DB "INSERT INTO AccessCards VALUES('$output','newcard','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0');"
 			sleep 0.2
-			echo "0" > /sys/class/gpio/gpio23/value
+			red_off
 			sleep 0.3
 			beep
-			echo "1" > /sys/class/gpio/gpio22/value
+			green_on
 			sleep 0.2
-			echo "0" > /sys/class/gpio/gpio22/value
+			green_off
 		elif [ -n $CardExists ]; then
 			Name=$(sqlite3 $DB "SELECT Name FROM AccessCards WHERE CardID='$output'")
 			if [[ $CheckDOW = "0" ]] || [[ $CheckHour = "0" ]]; then
 				echo "enabling access for $Name"
-				echo "1" > /sys/class/gpio/gpio22/value
+				green_on
 				for i in `seq -w 0 23`;do sqlite3 $DB "UPDATE AccessCards SET Hour$i='1' WHERE CardID='$output';";done
 				for i in `seq -w 1 7`;do sqlite3 $DB "UPDATE AccessCards SET DOW$i='1' WHERE CardID='$output';";done
-				echo "0" > /sys/class/gpio/gpio22/value
+				green_off
 				sleep 0.3
-				echo "1" > /sys/class/gpio/gpio22/value
+				green_on
 				sleep 0.2
-				echo "0" > /sys/class/gpio/gpio22/value
+				green_off
 			elif [[ $CheckDOW = "1" ]] && [[ $CheckHour = "1" ]]; then
 				echo "disabling access for $Name"
-				echo "1" > /sys/class/gpio/gpio22/value
+				green_on
 				for i in `seq -w 0 23`;do sqlite3 $DB "UPDATE AccessCards SET Hour$i='0' WHERE CardID='$output';";done
 				for i in `seq -w 1 7`;do sqlite3 $DB "UPDATE AccessCards SET DOW$i='0' WHERE CardID='$output';";done
-				echo "0" > /sys/class/gpio/gpio22/value
+				green_off
 				sleep 0.3
-				echo "1" > /sys/class/gpio/gpio23/value
+				red_on
 				sleep 0.2
-				echo "0" > /sys/class/gpio/gpio23/value
+				red_off
 			fi
 		fi
 		switch=1
@@ -159,31 +172,28 @@ while true
 			else
 				beep
 			fi
-			unlockdoor
+			unlock
 			enterdb
 			sleep 4
-			lockdoor
+			lock
 		elif [[ $CheckDOW = "0" ]] || [[ $CheckHour = "0" ]]; then
-			# turn on red LED
-			echo "1" > /sys/class/gpio/gpio23/value
+			red_on
 			beep
-			# turn off red LED
-			echo "0" > /sys/class/gpio/gpio23/value
+			red_off
 			echo "$(enterdb) Access Denied"
 			sleep 1
 		elif [ -z $output ]; then
 			continue
 		else
 			echo $(date) $output
-			# Beep and blink red LED
 			beep
-			echo "1" > /sys/class/gpio/gpio23/value
+			red_on
 			sleep 0.1
-			echo "0" > /sys/class/gpio/gpio23/value
+			red_off
 			sleep 0.2
-			echo "1" > /sys/class/gpio/gpio23/value
+			red_on
 			sleep 0.1
-			echo "0" > /sys/class/gpio/gpio23/value
+			red_off
 			sleep 1
 		fi
 	fi
