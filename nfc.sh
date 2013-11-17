@@ -1,8 +1,13 @@
 #!/bin/bash
 
 runfile=/var/run/nfc
+logfile=/var/log/nfc.log
 DB=/home/pi/NFCAccess/frontdoor.db
 gpio=/usr/local/bin/gpio
+
+log(){
+	echo "$(date "+%b %d %T") $@" >> $logfile
+}
 
 # switch GPIO 4
 # RED LED GPIO 22
@@ -103,14 +108,13 @@ beep(){
 }
 enterdb(){
 	# insert cardID and timestamp into sqlite database
-	sqlite3 $DB "INSERT INTO Entry VALUES('$output', strftime('%s','now'));"
+	sqlite3 $DB "INSERT INTO Entry VALUES(strftime('%s','now'),'$output','$@');"
 	# get Name from sqlite database from the CardID
 	Name=$(sqlite3 $DB "SELECT Name FROM AccessCards WHERE CardID='$output'")
-	# get the TIMESTAMP(in epoch format) from the databbase so we can output on the screen the time the card was swiped
-	time=$(sqlite3 $DB "SELECT TIMESTAMP FROM Entry WHERE CardID='$output' ORDER BY TIMESTAMP DESC limit 1")
-	# covert epoch TIMESTAMP to human readable form
-	dtime=$(date -d @$time)
-	echo $dtime $Name
+	if [ -z "$Name" ]; then
+		Name=$output
+	fi	
+	log "$Name $@" 
 }
 
 echo "1" > $runfile
@@ -134,7 +138,7 @@ while [ "$runstat" = "1" ]
 		# lookup CardID in database
 		CardExists=$(sqlite3 $DB "SELECT CardID FROM AccessCards WHERE CardID='$output'")
 		if [ -z $CardExists ] ;then
-			echo "Adding new card $output with name \"newcard\" and no access"
+			log "Adding new card $output with name \"newcard\" and no access" 
 			red_on
 			# Add new card
 			sqlite3 $DB "INSERT INTO AccessCards VALUES('$output','newcard','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0');"
@@ -148,7 +152,7 @@ while [ "$runstat" = "1" ]
 		elif [ -n $CardExists ]; then
 			Name=$(sqlite3 $DB "SELECT Name FROM AccessCards WHERE CardID='$output'")
 			if [[ $CheckDOW = "0" ]] || [[ $CheckHour = "0" ]]; then
-				echo "enabling access for $Name"
+				log "enabling access for $Name"
 				green_on
 				for i in `seq -w 0 23`;do sqlite3 $DB "UPDATE AccessCards SET Hour$i='1' WHERE CardID='$output';";done
 				for i in `seq -w 1 7`;do sqlite3 $DB "UPDATE AccessCards SET DOW$i='1' WHERE CardID='$output';";done
@@ -158,7 +162,7 @@ while [ "$runstat" = "1" ]
 				sleep 0.2
 				green_off
 			elif [[ $CheckDOW = "1" ]] && [[ $CheckHour = "1" ]]; then
-				echo "disabling access for $Name"
+				log "disabling access for $Name"
 				green_on
 				for i in `seq -w 0 23`;do sqlite3 $DB "UPDATE AccessCards SET Hour$i='0' WHERE CardID='$output';";done
 				for i in `seq -w 1 7`;do sqlite3 $DB "UPDATE AccessCards SET DOW$i='0' WHERE CardID='$output';";done
@@ -181,19 +185,20 @@ while [ "$runstat" = "1" ]
 				beep
 			fi
 			unlock
-			enterdb
+			enterdb granted
 			sleep 4
 			lock
 		elif [[ $CheckDOW = "0" ]] || [[ $CheckHour = "0" ]]; then
 			red_on
 			beep
 			red_off
-			echo "$(enterdb) Access Denied"
+			enterdb denied
 			sleep 1
 		elif [ -z $output ]; then
 			continue
 		else
-			echo $(date) $output
+			#log "$(date) $output"
+			enterdb unknown
 			beep
 			red_on
 			sleep 0.1
