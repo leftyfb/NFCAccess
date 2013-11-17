@@ -33,8 +33,19 @@ red_off(){
 	echo "0" > /sys/class/gpio/gpio23/value
 }
 
+unlock(){
+	# unlock 
+	echo "0" > /sys/class/gpio/gpio25/value
+	green_on
+}
+
+lock(){
+	# lock 
+	echo "1" > /sys/class/gpio/gpio25/value
+	green_off
+}
 #Make sure lock is enabled on startup
-echo "1" > /sys/class/gpio/gpio25/value
+lock
 
 tone (){
   local note="$1" time="$2"
@@ -98,18 +109,6 @@ enterdb(){
 	# covert epoch TIMESTAMP to human readable form
 	dtime=$(date -d @$time)
 	echo $dtime $Name
-}
-
-unlock(){
-	# unlock 
-	echo "0" > /sys/class/gpio/gpio25/value
-	green_on
-}
-
-lock(){
-	# lock 
-	echo "1" > /sys/class/gpio/gpio25/value
-	green_off
 }
 
 while true
