@@ -24,6 +24,7 @@ Function: RFID/NFC entry
 
 
 ### TODO
+ - [_] Add multiple entry points
  - [✓] Hours of the Day access
  - [✓] Day of the week access
  - [_] Time allotted access
