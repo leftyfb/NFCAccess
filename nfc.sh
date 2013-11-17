@@ -120,7 +120,7 @@ enterdb(){
 echo "1" > $runfile
 runstat=$(cat $runfile)
 
-#beep to signify it's ready
+# beep to signify it's ready
 beep
 
 while [ "$runstat" = "1" ]
@@ -197,7 +197,6 @@ while [ "$runstat" = "1" ]
 		elif [ -z $output ]; then
 			continue
 		else
-			#log "$(date) $output"
 			enterdb unknown
 			beep
 			red_on
