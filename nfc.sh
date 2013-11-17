@@ -106,6 +106,7 @@ beep(){
 	tone 0 0
 
 }
+
 enterdb(){
 	# insert cardID and timestamp into sqlite database
 	sqlite3 $DB "INSERT INTO Entry VALUES(strftime('%s','now'),'$output','$@');"
@@ -138,7 +139,7 @@ while [ "$runstat" = "1" ]
 		# lookup CardID in database
 		CardExists=$(sqlite3 $DB "SELECT CardID FROM AccessCards WHERE CardID='$output'")
 		if [ -z $CardExists ] ;then
-			log "Adding new card $output with name \"newcard\" and no access" 
+			enterdb "Adding new card with name \"newcard\" and no access" 
 			red_on
 			# Add new card
 			sqlite3 $DB "INSERT INTO AccessCards VALUES('$output','newcard','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0');"
@@ -152,7 +153,7 @@ while [ "$runstat" = "1" ]
 		elif [ -n $CardExists ]; then
 			Name=$(sqlite3 $DB "SELECT Name FROM AccessCards WHERE CardID='$output'")
 			if [[ $CheckDOW = "0" ]] || [[ $CheckHour = "0" ]]; then
-				log "enabling access for $Name"
+				enterdb "enabled access"
 				green_on
 				for i in `seq -w 0 23`;do sqlite3 $DB "UPDATE AccessCards SET Hour$i='1' WHERE CardID='$output';";done
 				for i in `seq -w 1 7`;do sqlite3 $DB "UPDATE AccessCards SET DOW$i='1' WHERE CardID='$output';";done
@@ -162,7 +163,7 @@ while [ "$runstat" = "1" ]
 				sleep 0.2
 				green_off
 			elif [[ $CheckDOW = "1" ]] && [[ $CheckHour = "1" ]]; then
-				log "disabling access for $Name"
+				enterdb "disabed access"
 				green_on
 				for i in `seq -w 0 23`;do sqlite3 $DB "UPDATE AccessCards SET Hour$i='0' WHERE CardID='$output';";done
 				for i in `seq -w 1 7`;do sqlite3 $DB "UPDATE AccessCards SET DOW$i='0' WHERE CardID='$output';";done
