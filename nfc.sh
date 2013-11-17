@@ -100,8 +100,12 @@ lockdoor(){
 
 while true
 	do 
+	DOW=$(date +%u)
+	Hour=$(date +%H)
 	# read from NFC/RFID reader
 	output=$(nfc-poll 2>/dev/null|grep UID|awk '{print $3,$4,$5,$6}'|sed 's/ //g')
+	CheckDOW=$(sqlite3 $DB "SELECT DOW$DOW FROM AccessCards WHERE CardID='$output'")
+	CheckHour=$(sqlite3 $DB "SELECT Hour$Hour FROM AccessCards WHERE CardID='$output'")
 	switch=$(cat /sys/class/gpio/gpio4/value)
 	if [ $switch = "1" ] ; then
 		beep
@@ -120,11 +124,10 @@ while true
 			sleep 0.2
 			echo "0" > /sys/class/gpio/gpio22/value
 			# Add new card
-			sqlite3 frontdoor.db "INSERT INTO AccessCards VALUES('$output','newcard','no');"
+			sqlite3 $DB "INSERT INTO AccessCards VALUES('$output','newcard','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0');"
 		elif [ -n $CardExists ]; then
-			AllowAccess=$(sqlite3 $DB "SELECT AllowAccess FROM AccessCards WHERE CardID='$output'")
 			Name=$(sqlite3 $DB "SELECT Name FROM AccessCards WHERE CardID='$output'")
-			if [ $AllowAccess = 'no' ]; then
+			if [[ $CheckDOW = "0" ]] || [[ $CheckHour = "0" ]]; then
 				echo "enabling access for $Name"
 				echo "1" > /sys/class/gpio/gpio22/value
 				sleep 0.2
@@ -133,8 +136,9 @@ while true
 				echo "1" > /sys/class/gpio/gpio22/value
 				sleep 0.2
 				echo "0" > /sys/class/gpio/gpio22/value
-				sqlite3 $DB "UPDATE AccessCards SET AllowAccess='yes' WHERE CardID='$output';"
-			elif [ $AllowAccess = 'yes' ]; then
+				for i in `seq -w 0 24`;do sqlite3 $DB "UPDATE AccessCards SET Hour$i='1' WHERE CardID='$output';";done
+				for i in `seq -w 1 7`;do sqlite3 $DB "UPDATE AccessCards SET DOW$i='1' WHERE CardID='$output';";done
+			elif [[ $CheckDOW = "1" ]] && [[ $CheckHour = "1" ]]; then
 				echo "disabling access for $Name"
 				echo "1" > /sys/class/gpio/gpio22/value
 				sleep 0.2
@@ -143,16 +147,16 @@ while true
 				echo "1" > /sys/class/gpio/gpio23/value
 				sleep 0.2
 				echo "0" > /sys/class/gpio/gpio23/value
-				sqlite3 $DB "UPDATE AccessCards SET AllowAccess='no' WHERE CardID='$output';"
+				for i in `seq -w 0 24`;do sqlite3 $DB "UPDATE AccessCards SET Hour$i='0' WHERE CardID='$output';";done
+				for i in `seq -w 1 7`;do sqlite3 $DB "UPDATE AccessCards SET DOW$i='0' WHERE CardID='$output';";done
 			fi
 		fi
 		output=""
-		return
+		#return
 	fi
 
 	# lookup CardID access rights in sqlite database
-	AllowAccess=$(sqlite3 $DB "SELECT AllowAccess FROM AccessCards WHERE CardID='$output'")
-	if [ $AllowAccess = "yes" ] ; then
+	if [[ $CheckDOW = "1" ]] && [[ $CheckHour = "1" ]]; then
 		month=$(date +%m)
 		if [ $month = "12" ]; then
 			playxmas
@@ -163,7 +167,7 @@ while true
 		enterdb
 		sleep 4
 		lockdoor
-	elif [ $AllowAccess = "no" ] ; then
+	elif [[ $CheckDOW = "0" ]] || [[ $CheckHour = "0" ]]; then
 		# turn on red LED
 		echo "1" > /sys/class/gpio/gpio23/value
 		beep
