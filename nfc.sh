@@ -15,7 +15,7 @@ log(){
 # RELAY/Door lock GPIO 25
 for i in 4 22 23 25 ; do echo "$i" > /sys/class/gpio/unexport 2>/dev/null ; echo "$i" > /sys/class/gpio/export ;done
 
-echo "in" > /sys/class/gpio/gpio22/direction
+echo "in" > /sys/class/gpio/gpio4/direction
 echo "out" > /sys/class/gpio/gpio22/direction
 echo "out" > /sys/class/gpio/gpio23/direction
 echo "out" > /sys/class/gpio/gpio25/direction
@@ -130,7 +130,7 @@ while [ "$runstat" = "1" ]
 	DOW=$(date +%u)
 	Hour=$(date +%H)
 	# read from NFC/RFID reader
-	output=$(nfc-poll 2>/dev/null|grep UID|awk '{print $3,$4,$5,$6}'|sed 's/ //g')
+	output=$(/usr/local/bin/nfc-poll 2>/dev/null|grep UID|awk '{print $3,$4,$5,$6}'|sed 's/ //g')
 	CheckDOW=$(sqlite3 $DB "SELECT DOW$DOW FROM AccessCards WHERE CardID='$output'")
 	CheckHour=$(sqlite3 $DB "SELECT Hour$Hour FROM AccessCards WHERE CardID='$output'")
 	switch=$(cat /sys/class/gpio/gpio4/value)
