@@ -1,10 +1,9 @@
-BEGIN TRANSACTION;
-CREATE TABLE AccessCards(CardID text primary key, Name text,Hour00, Hour01 integer, Hour02 integer, Hour03 integer, Hour04 integer, Hour05 integer, Hour06 integer, Hour07 integer, Hour08 integer, Hour09 integer, Hour10 integer, Hour11 integer, Hour12 integer, Hour13 integer, Hour14 integer, Hour15 integer, Hour16 integer, Hour17 integer, Hour18 integer, Hour19 integer, Hour20 integer, Hour21 integer, Hour22 integer, Hour23 integer, DOW1 integer, DOW2 integer, DOW3 integer, DOW4 integer, DOW5 integer, DOW6 integer, DOW7 integer);
+CREATE TABLE AccessCards (CardID text, Name text,Hour00 integer, Hour01 integer, Hour02 integer, Hour03 integer, Hour04 integer, Hour05 integer, Hour06 integer, Hour07 integer, Hour08 integer, Hour09 integer, Hour10 integer, Hour11 integer, Hour12 integer, Hour13 integer, Hour14 integer, Hour15 integer, Hour16 integer, Hour17 integer, Hour18 integer, Hour19 integer, Hour20 integer, Hour21 integer, Hour22 integer, Hour23 integer, DOW1 integer, DOW2 integer, DOW3 integer, DOW4 integer, DOW5 integer, DOW6 integer, DOW7 integer);
+
+
+CREATE TABLE Entry (Timestamp TIMESTAMP DEFAULT NOW(), CardID text, Result text);
+
+
 INSERT INTO AccessCards VALUES('aaaaaaaa','John Smith','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1');
 INSERT INTO AccessCards VALUES('bbbbbbbb','Jane Smith','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1','1');
 INSERT INTO AccessCards VALUES('cccccccc','Temporary Guest','0','0','0','0','0','0','0','0','0','0','0','0','1','1','1','1','1','1','1','0','0','0','0','0','0','0','0','0','0','1','0');
-COMMIT;
-
-BEGIN TRANSACTION;
-CREATE TABLE Entry(Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, CardID text, Result text);
-COMMIT;
