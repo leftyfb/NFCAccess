@@ -5,7 +5,7 @@ Function: RFID/NFC entry
 
 #### Usage:
 	Swipe card to gain access
-	Hold button then swipe new card to add it to the SQLite3 database
+	Hold button then swipe new card to add it to the MySQL database
 	Hold button then swipe existing card to toggle access privileges
 
 #### Hardware:
@@ -14,7 +14,7 @@ Function: RFID/NFC entry
 
 #### Software:
 	Raspbian - http://www.raspberrypi.org/downloads
-	sudo apt-get install libusb-dev sqlite3
+	sudo apt-get install libusb-dev mysql-server 
 	WiringPi - https://projects.drogon.net/raspberry-pi/wiringpi/
 	libnfc - http://libnfc.googlecode.com
 
