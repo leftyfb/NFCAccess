@@ -4,7 +4,6 @@ mysqlusername="root"
 mysqlpassword="OgeiM5aiph"
 runfile=/var/run/nfc
 logfile=/var/log/nfc.log
-DB=/home/pi/NFCAccess/frontdoor.db
 gpio=/usr/local/bin/gpio
 
 log(){
@@ -132,14 +131,14 @@ beep
 
 while [ "$runstat" = "1" ]
 	do 
-#	status=$(mysql -B --disable-column-names --user=$mysqlusername --password=$mysqlpassword gpio -e "SELECT pinStatus FROM pinStatus WHERE pinNumber='25'";)
+#	status=$(MYSQL "SELECT pinStatus FROM pinStatus WHERE pinNumber='25'";)
 #		if [ "$status" == "1" ] || ; then
 #			unlock
-#			sqlite3 $DB "INSERT INTO Entry VALUES(strftime('%s','now'),'$output','Remote');"
+#			MYSQL "INSERT INTO Entry VALUES (DEFAULT,'$output','Remote');"
 #			log "Remote opened door" 
 #		elif [ "$status" == "0" ]; then
 #			lock
-#			sqlite3 $DB "INSERT INTO Entry VALUES(strftime('%s','now'),'$output','Remote');"
+#			MYSQL "INSERT INTO Entry VALUES (DEFAULT,'$output','Remote');"
 #			log "Remote closed door" 
 #		fi
 	runstat=$(cat $runfile)
