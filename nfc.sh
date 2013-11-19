@@ -1,5 +1,7 @@
 #!/bin/bash
 
+mysqlusername="root"
+mysqlpassword="OgeiM5aiph"
 runfile=/var/run/nfc
 logfile=/var/log/nfc.log
 DB=/home/pi/NFCAccess/frontdoor.db
@@ -7,6 +9,10 @@ gpio=/usr/local/bin/gpio
 
 log(){
 	echo "$(date "+%b %d %T") $@" >> $logfile
+}
+
+MYSQL(){
+	mysql -B --disable-column-names --user=$mysqlusername --password=$mysqlpassword nfc -e "$@"
 }
 
 # switch GPIO 4
@@ -108,10 +114,10 @@ beep(){
 }
 
 enterdb(){
-	# insert cardID and timestamp into sqlite database
-	sqlite3 $DB "INSERT INTO Entry VALUES(strftime('%s','now'),'$output','$@');"
-	# get Name from sqlite database from the CardID
-	Name=$(sqlite3 $DB "SELECT Name FROM AccessCards WHERE CardID='$output'")
+	# insert cardID and timestamp into mysql database
+	MYSQL "INSERT INTO Entry VALUES (DEFAULT,'$output','$@');"
+	# get Name from mysql database from the CardID
+	Name=$(MYSQL "SELECT Name FROM AccessCards WHERE CardID='$output'")
 	if [ -z "$Name" ]; then
 		Name=$output
 	fi	
@@ -126,23 +132,33 @@ beep
 
 while [ "$runstat" = "1" ]
 	do 
+#	status=$(mysql -B --disable-column-names --user=$mysqlusername --password=$mysqlpassword gpio -e "SELECT pinStatus FROM pinStatus WHERE pinNumber='25'";)
+#		if [ "$status" == "1" ] || ; then
+#			unlock
+#			sqlite3 $DB "INSERT INTO Entry VALUES(strftime('%s','now'),'$output','Remote');"
+#			log "Remote opened door" 
+#		elif [ "$status" == "0" ]; then
+#			lock
+#			sqlite3 $DB "INSERT INTO Entry VALUES(strftime('%s','now'),'$output','Remote');"
+#			log "Remote closed door" 
+#		fi
 	runstat=$(cat $runfile)
 	DOW=$(date +%u)
 	Hour=$(date +%H)
 	# read from NFC/RFID reader
 	output=$(/usr/local/bin/nfc-poll 2>/dev/null|grep UID|awk '{print $3,$4,$5,$6}'|sed 's/ //g')
-	CheckDOW=$(sqlite3 $DB "SELECT DOW$DOW FROM AccessCards WHERE CardID='$output'")
-	CheckHour=$(sqlite3 $DB "SELECT Hour$Hour FROM AccessCards WHERE CardID='$output'")
+	CheckDOW=$(MYSQL "SELECT DOW$DOW FROM AccessCards WHERE CardID='$output'")
+	CheckHour=$(MYSQL "SELECT Hour$Hour FROM AccessCards WHERE CardID='$output'")
 	switch=$(cat /sys/class/gpio/gpio4/value)
 	if [ $switch = "1" ] ; then
 		beep
 		# lookup CardID in database
-		CardExists=$(sqlite3 $DB "SELECT CardID FROM AccessCards WHERE CardID='$output'")
+		CardExists=$(MYSQL "SELECT CardID FROM AccessCards WHERE CardID='$output'")
 		if [ -z $CardExists ] ;then
 			enterdb "Adding new card with name \"newcard\" and no access" 
 			red_on
 			# Add new card
-			sqlite3 $DB "INSERT INTO AccessCards VALUES('$output','newcard','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0');"
+			MYSQL "INSERT INTO AccessCards VALUES('$output','newcard','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0');"
 			sleep 0.2
 			red_off
 			sleep 0.3
@@ -151,12 +167,12 @@ while [ "$runstat" = "1" ]
 			sleep 0.2
 			green_off
 		elif [ -n $CardExists ]; then
-			Name=$(sqlite3 $DB "SELECT Name FROM AccessCards WHERE CardID='$output'")
+			Name=$(MYSQL "SELECT Name FROM AccessCards WHERE CardID='$output'")
 			if [[ $CheckDOW = "0" ]] || [[ $CheckHour = "0" ]]; then
 				enterdb "enabled access"
 				green_on
-				for i in `seq -w 0 23`;do sqlite3 $DB "UPDATE AccessCards SET Hour$i='1' WHERE CardID='$output';";done
-				for i in `seq -w 1 7`;do sqlite3 $DB "UPDATE AccessCards SET DOW$i='1' WHERE CardID='$output';";done
+				for i in `seq -w 0 23`;do MYSQL "UPDATE AccessCards SET Hour$i='1' WHERE CardID='$output';";done
+				for i in `seq -w 1 7`;do MYSQL "UPDATE AccessCards SET DOW$i='1' WHERE CardID='$output';";done
 				green_off
 				sleep 0.3
 				green_on
@@ -165,8 +181,8 @@ while [ "$runstat" = "1" ]
 			elif [[ $CheckDOW = "1" ]] && [[ $CheckHour = "1" ]]; then
 				enterdb "disabed access"
 				green_on
-				for i in `seq -w 0 23`;do sqlite3 $DB "UPDATE AccessCards SET Hour$i='0' WHERE CardID='$output';";done
-				for i in `seq -w 1 7`;do sqlite3 $DB "UPDATE AccessCards SET DOW$i='0' WHERE CardID='$output';";done
+				for i in `seq -w 0 23`;do MYSQL "UPDATE AccessCards SET Hour$i='0' WHERE CardID='$output';";done
+				for i in `seq -w 1 7`;do MYSQL "UPDATE AccessCards SET DOW$i='0' WHERE CardID='$output';";done
 				green_off
 				sleep 0.3
 				red_on
@@ -177,7 +193,7 @@ while [ "$runstat" = "1" ]
 		switch=1
 	elif [ $switch = "0" ];then
 
-		# lookup CardID access rights in sqlite database
+		# lookup CardID access rights in mysql database
 		if [[ $CheckDOW = "1" ]] && [[ $CheckHour = "1" ]]; then
 			month=$(date +%m)
 			if [ $month = "12" ]; then
