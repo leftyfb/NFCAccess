@@ -1,5 +1,6 @@
 #!/bin/bash
 
+LocalNode=$HOSTNAME
 mysqlusername="root"
 mysqlpassword="OgeiM5aiph"
 runfile=/var/run/nfc
@@ -7,7 +8,7 @@ logfile=/var/log/nfc.log
 gpio=/usr/local/bin/gpio
 
 log(){
-	echo "$(date "+%b %d %T") $@" >> $logfile
+	echo "$(date "+%b %d %T") $@" for $LocalNode >> $logfile
 }
 
 MYSQL(){
@@ -114,7 +115,7 @@ beep(){
 
 enterdb(){
 	# insert cardID and timestamp into mysql database
-	MYSQL "INSERT INTO Entry VALUES (DEFAULT,'$output','$@');"
+	MYSQL "INSERT INTO EntryLog VALUES (DEFAULT,'$output','$LocalNode','$@');"
 	# get Name from mysql database from the CardID
 	Name=$(MYSQL "SELECT Name FROM AccessCards WHERE CardID='$output'")
 	if [ -z "$Name" ]; then
@@ -134,11 +135,11 @@ while [ "$runstat" = "1" ]
 #	status=$(MYSQL "SELECT pinStatus FROM pinStatus WHERE pinNumber='25'";)
 #		if [ "$status" == "1" ] || ; then
 #			unlock
-#			MYSQL "INSERT INTO Entry VALUES (DEFAULT,'$output','Remote');"
+#			MYSQL "INSERT INTO EntryLog VALUES (DEFAULT,'$output','Remote');"
 #			log "Remote opened door" 
 #		elif [ "$status" == "0" ]; then
 #			lock
-#			MYSQL "INSERT INTO Entry VALUES (DEFAULT,'$output','Remote');"
+#			MYSQL "INSERT INTO EntryLog VALUES (DEFAULT,'$output','Remote');"
 #			log "Remote closed door" 
 #		fi
 	runstat=$(cat $runfile)
@@ -146,8 +147,8 @@ while [ "$runstat" = "1" ]
 	Hour=$(date +%H)
 	# read from NFC/RFID reader
 	output=$(/usr/local/bin/nfc-poll 2>/dev/null|grep UID|awk '{print $3,$4,$5,$6}'|sed 's/ //g')
-	CheckDOW=$(MYSQL "SELECT DOW$DOW FROM AccessCards WHERE CardID='$output'")
-	CheckHour=$(MYSQL "SELECT Hour$Hour FROM AccessCards WHERE CardID='$output'")
+	CheckDOW=$(MYSQL "SELECT DOW$DOW FROM AccessNodes WHERE NodeName='$LocalNode' AND CardID='$output'")
+	CheckHour=$(MYSQL "SELECT Hour$Hour FROM AccessNodes WHERE NodeName='$LocalNode' AND CardID='$output'")
 	switch=$(cat /sys/class/gpio/gpio4/value)
 	if [ $switch = "1" ] ; then
 		beep
@@ -157,7 +158,8 @@ while [ "$runstat" = "1" ]
 			enterdb "Adding new card with name \"newcard\" and no access" 
 			red_on
 			# Add new card
-			MYSQL "INSERT INTO AccessCards VALUES('$output','newcard','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0');"
+			MYSQL "INSERT INTO AccessCards VALUES('$output','newcard','','');"
+			MYSQL "INSERT INTO AccessNodes VALUES('$LocalNode','','$output','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0');"
 			sleep 0.2
 			red_off
 			sleep 0.3
@@ -168,20 +170,20 @@ while [ "$runstat" = "1" ]
 		elif [ -n $CardExists ]; then
 			Name=$(MYSQL "SELECT Name FROM AccessCards WHERE CardID='$output'")
 			if [[ $CheckDOW = "0" ]] || [[ $CheckHour = "0" ]]; then
-				enterdb "enabled access"
+				enterdb "enabled full access"
 				green_on
-				for i in `seq -w 0 23`;do MYSQL "UPDATE AccessCards SET Hour$i='1' WHERE CardID='$output';";done
-				for i in `seq -w 1 7`;do MYSQL "UPDATE AccessCards SET DOW$i='1' WHERE CardID='$output';";done
+				for i in `seq -w 0 23`;do MYSQL "UPDATE AccessNodes SET Hour$i='1' WHERE NodeName='$LocalNode' AND CardID='$output';";done
+				for i in `seq -w 1 7`;do MYSQL "UPDATE AccessNodes SET DOW$i='1' WHERE NodeName='$LocalNode' AND CardID='$output';";done
 				green_off
 				sleep 0.3
 				green_on
 				sleep 0.2
 				green_off
 			elif [[ $CheckDOW = "1" ]] && [[ $CheckHour = "1" ]]; then
-				enterdb "disabed access"
+				enterdb "disabed access all access"
 				green_on
-				for i in `seq -w 0 23`;do MYSQL "UPDATE AccessCards SET Hour$i='0' WHERE CardID='$output';";done
-				for i in `seq -w 1 7`;do MYSQL "UPDATE AccessCards SET DOW$i='0' WHERE CardID='$output';";done
+				for i in `seq -w 0 23`;do MYSQL "UPDATE AccessNodes SET Hour$i='0' WHERE NodeName='$LocalNode' AND CardID='$output';";done
+				for i in `seq -w 1 7`;do MYSQL "UPDATE AccessNodes SET DOW$i='0' WHERE NodeName='$LocalNode' AND CardID='$output';";done
 				green_off
 				sleep 0.3
 				red_on
@@ -201,19 +203,19 @@ while [ "$runstat" = "1" ]
 				beep
 			fi
 			unlock
-			enterdb granted
+			enterdb "granted access"
 			sleep 4
 			lock
 		elif [[ $CheckDOW = "0" ]] || [[ $CheckHour = "0" ]]; then
 			red_on
 			beep
 			red_off
-			enterdb denied
+			enterdb "denied access"
 			sleep 1
 		elif [ -z $output ]; then
 			continue
 		else
-			enterdb unknown
+			enterdb "unknown card"
 			beep
 			red_on
 			sleep 0.1
