@@ -95,15 +95,15 @@ playxmas(){
  tone 0 0
 }
 
-playshave(){
-	tone 60 0.2
-	tone 55 0.1
-	tone 55 0.1
-	tone 57 0.2
-	tone 55 0.2
+shave(){
+	tone 61 0.2
+	tone 56 0.1
+	tone 56 0.1
+	tone 58 0.2
+	tone 56 0.2
 	tone 0 0.2
-	tone 59 0.2
 	tone 60 0.2
+	tone 61 0.2
 	tone 0 0
 }
 
@@ -147,8 +147,6 @@ while [ "$runstat" = "1" ]
 	Hour=$(date +%H)
 	# read from NFC/RFID reader
 	output=$(/usr/local/bin/nfc-poll 2>/dev/null|grep UID|awk '{print $3,$4,$5,$6}'|sed 's/ //g')
-	CheckDOW=$(MYSQL "SELECT DOW$DOW FROM AccessNodes WHERE NodeName='$LocalNode' AND CardID='$output'")
-	CheckHour=$(MYSQL "SELECT Hour$Hour FROM AccessNodes WHERE NodeName='$LocalNode' AND CardID='$output'")
 	switch=$(cat /sys/class/gpio/gpio4/value)
 	if [ $switch = "1" ] ; then
 		beep
@@ -180,7 +178,7 @@ while [ "$runstat" = "1" ]
 				sleep 0.2
 				green_off
 			elif [[ $CheckDOW = "1" ]] && [[ $CheckHour = "1" ]]; then
-				enterdb "disabed access all access"
+				enterdb "disabled all access"
 				green_on
 				for i in `seq -w 0 23`;do MYSQL "UPDATE AccessNodes SET Hour$i='0' WHERE NodeName='$LocalNode' AND CardID='$output';";done
 				for i in `seq -w 1 7`;do MYSQL "UPDATE AccessNodes SET DOW$i='0' WHERE NodeName='$LocalNode' AND CardID='$output';";done
@@ -193,11 +191,18 @@ while [ "$runstat" = "1" ]
 		fi
 		switch=1
 	elif [ $switch = "0" ];then
-
+		CheckDOW=$(MYSQL "SELECT DOW$DOW FROM AccessNodes WHERE NodeName='$LocalNode' AND CardID='$output'")
+		CheckHour=$(MYSQL "SELECT Hour$Hour FROM AccessNodes WHERE NodeName='$LocalNode' AND CardID='$output'")
+		Tone=$(MYSQL "SELECT Tone FROM AccessCards WHERE CardID='$output'")
+		
 		# lookup CardID access rights in mysql database
 		if [[ $CheckDOW = "1" ]] && [[ $CheckHour = "1" ]]; then
 			month=$(date +%m)
-			if [ $month = "12" ]; then
+			if [ -z $Tone ];then
+				beep
+			elif [ -n $Tone ];then
+				$($Tone)
+			elif [ $month = "12" ]; then
 				playxmas
 			else
 				beep
