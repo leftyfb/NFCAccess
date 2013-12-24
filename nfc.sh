@@ -12,7 +12,9 @@ log(){
 }
 
 MYSQL(){
-	mysql -B --disable-column-names --user=$mysqlusername --password=$mysqlpassword nfc -e "$@"
+	dbname=$1
+	shift
+	mysql -B --disable-column-names --user=$mysqlusername --password=$mysqlpassword $dbname -e "$@"
 }
 
 # switch GPIO 4
@@ -48,12 +50,14 @@ red_off(){
 
 unlock(){
 	# unlock 
+	MYSQL gpio "UPDATE pinStatus SET pinStatus='1' WHERE pinNumber='25';"
 	echo "1" > /sys/class/gpio/gpio25/value
 	green_on
 }
 
 lock(){
 	# lock 
+	MYSQL gpio "UPDATE pinStatus SET pinStatus='0' WHERE pinNumber='25';"
 	echo "0" > /sys/class/gpio/gpio25/value
 	green_off
 }
@@ -115,9 +119,9 @@ beep(){
 
 enterdb(){
 	# insert cardID and timestamp into mysql database
-	MYSQL "INSERT INTO EntryLog VALUES (DEFAULT,'$output','$LocalNode','$@');"
+	MYSQL nfc "INSERT INTO EntryLog VALUES (DEFAULT,'$output','$LocalNode','$@');"
 	# get Name from mysql database from the CardID
-	Name=$(MYSQL "SELECT Name FROM AccessCards WHERE CardID='$output'")
+	Name=$(MYSQL nfc "SELECT Name FROM AccessCards WHERE CardID='$output'")
 	if [ -z "$Name" ]; then
 		Name=$output
 	fi	
@@ -132,14 +136,14 @@ beep
 
 while [ "$runstat" = "1" ]
 	do 
-#	status=$(MYSQL "SELECT pinStatus FROM pinStatus WHERE pinNumber='25'";)
+#	status=$(MYSQL nfc "SELECT pinStatus FROM pinStatus WHERE pinNumber='25'";)
 #		if [ "$status" == "1" ] || ; then
 #			unlock
-#			MYSQL "INSERT INTO EntryLog VALUES (DEFAULT,'$output','Remote');"
+#			MYSQL nfc "INSERT INTO EntryLog VALUES (DEFAULT,'$output','Remote');"
 #			log "Remote opened door" 
 #		elif [ "$status" == "0" ]; then
 #			lock
-#			MYSQL "INSERT INTO EntryLog VALUES (DEFAULT,'$output','Remote');"
+#			MYSQL nfc "INSERT INTO EntryLog VALUES (DEFAULT,'$output','Remote');"
 #			log "Remote closed door" 
 #		fi
 	runstat=$(cat $runfile)
@@ -147,17 +151,19 @@ while [ "$runstat" = "1" ]
 	Hour=$(date +%H)
 	# read from NFC/RFID reader
 	output=$(/usr/local/bin/nfc-poll 2>/dev/null|grep UID|awk '{print $3,$4,$5,$6}'|sed 's/ //g')
+	CardExists=$(MYSQL nfc "SELECT CardID FROM AccessCards WHERE CardID='$output'")
 	switch=$(cat /sys/class/gpio/gpio4/value)
+	CheckDOW=$(MYSQL nfc "SELECT DOW$DOW FROM AccessNodes WHERE NodeName='$LocalNode' AND CardID='$output'")
+	CheckHour=$(MYSQL nfc "SELECT Hour$Hour FROM AccessNodes WHERE NodeName='$LocalNode' AND CardID='$output'")
 	if [ $switch = "1" ] ; then
 		beep
 		# lookup CardID in database
-		CardExists=$(MYSQL "SELECT CardID FROM AccessCards WHERE CardID='$output'")
 		if [ -z $CardExists ] ;then
 			enterdb "Adding new card with name \"newcard\" and no access" 
 			red_on
 			# Add new card
-			MYSQL "INSERT INTO AccessCards VALUES('$output','newcard','','');"
-			MYSQL "INSERT INTO AccessNodes VALUES('$LocalNode','','$output','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0');"
+			MYSQL nfc "INSERT INTO AccessCards VALUES('$output','newcard','','');"
+			MYSQL nfc "INSERT INTO AccessNodes VALUES('$LocalNode','','$output','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0','0');"
 			sleep 0.2
 			red_off
 			sleep 0.3
@@ -166,12 +172,12 @@ while [ "$runstat" = "1" ]
 			sleep 0.2
 			green_off
 		elif [ -n $CardExists ]; then
-			Name=$(MYSQL "SELECT Name FROM AccessCards WHERE CardID='$output'")
+			Name=$(MYSQL nfc "SELECT Name FROM AccessCards WHERE CardID='$output'")
 			if [[ $CheckDOW = "0" ]] || [[ $CheckHour = "0" ]]; then
 				enterdb "enabled full access"
 				green_on
-				for i in `seq -w 0 23`;do MYSQL "UPDATE AccessNodes SET Hour$i='1' WHERE NodeName='$LocalNode' AND CardID='$output';";done
-				for i in `seq -w 1 7`;do MYSQL "UPDATE AccessNodes SET DOW$i='1' WHERE NodeName='$LocalNode' AND CardID='$output';";done
+				for i in `seq -w 0 23`;do MYSQL nfc "UPDATE AccessNodes SET Hour$i='1' WHERE NodeName='$LocalNode' AND CardID='$output';";done
+				for i in `seq -w 1 7`;do MYSQL nfc "UPDATE AccessNodes SET DOW$i='1' WHERE NodeName='$LocalNode' AND CardID='$output';";done
 				green_off
 				sleep 0.3
 				green_on
@@ -180,8 +186,8 @@ while [ "$runstat" = "1" ]
 			elif [[ $CheckDOW = "1" ]] && [[ $CheckHour = "1" ]]; then
 				enterdb "disabled all access"
 				green_on
-				for i in `seq -w 0 23`;do MYSQL "UPDATE AccessNodes SET Hour$i='0' WHERE NodeName='$LocalNode' AND CardID='$output';";done
-				for i in `seq -w 1 7`;do MYSQL "UPDATE AccessNodes SET DOW$i='0' WHERE NodeName='$LocalNode' AND CardID='$output';";done
+				for i in `seq -w 0 23`;do MYSQL nfc "UPDATE AccessNodes SET Hour$i='0' WHERE NodeName='$LocalNode' AND CardID='$output';";done
+				for i in `seq -w 1 7`;do MYSQL nfc "UPDATE AccessNodes SET DOW$i='0' WHERE NodeName='$LocalNode' AND CardID='$output';";done
 				green_off
 				sleep 0.3
 				red_on
@@ -191,19 +197,28 @@ while [ "$runstat" = "1" ]
 		fi
 		switch=1
 	elif [ $switch = "0" ];then
-		CheckDOW=$(MYSQL "SELECT DOW$DOW FROM AccessNodes WHERE NodeName='$LocalNode' AND CardID='$output'")
-		CheckHour=$(MYSQL "SELECT Hour$Hour FROM AccessNodes WHERE NodeName='$LocalNode' AND CardID='$output'")
-		Tone=$(MYSQL "SELECT Tone FROM AccessCards WHERE CardID='$output'")
+		Tone=$(MYSQL nfc "SELECT Tone FROM AccessCards WHERE CardID='$output'")
 		
 		# lookup CardID access rights in mysql database
-		if [[ $CheckDOW = "1" ]] && [[ $CheckHour = "1" ]]; then
+		if [[ -z $CardExists ]] && [[ -n $output ]];then
+			enterdb "unknown card"
+			beep
+			red_on
+			sleep 0.1
+			red_off
+			sleep 0.2
+			red_on
+			sleep 0.1
+			red_off
+			sleep 1
+		elif [[ $CheckDOW = "1" ]] && [[ $CheckHour = "1" ]]; then
 			month=$(date +%m)
-			if [ -z $Tone ];then
-				beep
-			elif [ -n $Tone ];then
+			if [ -n $Tone ];then
 				$($Tone)
 			elif [ $month = "12" ]; then
 				playxmas
+			elif [ -z $Tone ];then
+				beep
 			else
 				beep
 			fi
@@ -219,17 +234,6 @@ while [ "$runstat" = "1" ]
 			sleep 1
 		elif [ -z $output ]; then
 			continue
-		else
-			enterdb "unknown card"
-			beep
-			red_on
-			sleep 0.1
-			red_off
-			sleep 0.2
-			red_on
-			sleep 0.1
-			red_off
-			sleep 1
 		fi
 	fi
 done
