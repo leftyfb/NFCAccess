@@ -32,5 +32,5 @@ Function: RFID/NFC entry
  - [✓] LED light
  - [✓] Script to add cards
  - [✓] Button to auto-add card
- - [_] Web interface
+ - [+] Web interface
  - [_] Mobile interface
