@@ -2,7 +2,7 @@
 
 LocalNode=$HOSTNAME
 mysqlusername="root"
-mysqlpassword="OgeiM5aiph"
+mysqlpassword="<somepassword>"
 runfile=/var/run/nfc
 logfile=/var/log/nfc.log
 gpio=/usr/local/bin/gpio
