@@ -11,7 +11,7 @@ $start = $page * $limit;
 $nextpage = $page + 1;
 $prevpage = $page - 1;
 
-$con=mysqli_connect("localhost","root","<somepassword>","nfc");
+$con=mysqli_connect("localhost","root","<password>","nfc");
 if (mysqli_connect_errno())
   {echo "Failed to connect to MySQL: " . mysqli_connect_error();}
 
@@ -31,16 +31,44 @@ elseif(isset($_GET['edit']) && !empty($_GET['edit']))
   $result = mysqli_query($con,"SELECT * from AccessCards where name = '$edit'");
   while($row = mysqli_fetch_array($result)) 
   {
+   $CardID = $row['CardID'];
    echo "<a href=" . $_SERVER['SCRIPT_NAME'] . ">Home</a>";
    echo "<form action=\"log.php\" method=\"post\">";
    echo "Card ID: <input type=\"text\" name=\"CardID\" value=\"" . $row['CardID'] . "\">";
    echo "Name: <input type=\"text\" name=\"Name\" value=\"" . $row['Name'] . "\">";
-   echo "Tone: <input type=\"text\" name=\"Tone\" value=\"" . $row['Tone'] . "\">";
    echo "Email: <input type=\"text\" name=\"email\" value=\"" . $row['email'] . "\">";
+   echo "Tone: <input type=\"text\" name=\"Tone\" value=\"" . $row['Tone'] . "\">";
    echo "<input type=\"submit\" value=\"Update\">";
    echo "</form>";
-   exit();
+   echo "<br>";
   }
+  echo "<table border=1><tr><td>NodeName</td><td>Location</td><td>12AM</td>";
+   for ($x=1; $x<=11; $x++)
+   {
+    echo "<td>" . $x . "AM</td>";
+   }
+   echo "<td>12PM</td>";
+   for ($x=1; $x<=11; $x++)
+   {
+    echo "<td>" . $x . "PM</td>";
+   }
+   echo "</tr>";
+   $result = mysqli_query($con,"SELECT * from AccessNodes WHERE CardID = '$CardID'");
+   while($row = mysqli_fetch_array($result)) 
+   {
+    echo "<form action=\"log.php\" method=\"post\">";
+    echo "<tr>";
+    echo "<td>" . $row['NodeName'] . "</td>";
+    echo "<td>" . $row['Location'] . "</td>";
+    for ($x=0; $x<=23; $x++)
+   {
+   echo "<td><input type=\"checkbox\" name=\"Hour" . str_pad($x,2,"0",STR_PAD_LEFT) . "\" value=\"" . $row['Hour00'] . "\"></td>";
+   }
+    echo "<td><input type=\"submit\" value=\"Update\"></td></tr>";
+    echo "</form>";
+   }
+   echo "</table>";
+   exit();
  }
 elseif(isset($_POST['CardID']) && isset($_POST['Name']) && isset($_POST['Tone']) && isset($_POST['email']))
  {
