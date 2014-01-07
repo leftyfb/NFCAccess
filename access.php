@@ -33,7 +33,7 @@ elseif(isset($_GET['edit']) && !empty($_GET['edit']))
   {
    $CardID = $row['CardID'];
    echo "<a href=" . $_SERVER['SCRIPT_NAME'] . ">Home</a>";
-   echo "<form action=\"log.php\" method=\"post\">";
+   echo "<form action=\"" . $_SERVER['SCRIPT_NAME'] . "\" method=\"post\">";
    echo "Card ID: <input type=\"text\" name=\"CardID\" value=\"" . $row['CardID'] . "\">";
    echo "Name: <input type=\"text\" name=\"Name\" value=\"" . $row['Name'] . "\">";
    echo "Email: <input type=\"text\" name=\"email\" value=\"" . $row['email'] . "\">";
@@ -56,7 +56,7 @@ elseif(isset($_GET['edit']) && !empty($_GET['edit']))
    $result = mysqli_query($con,"SELECT * FROM AccessNodes, AccessCards WHERE AccessNodes.CardID = AccessCards.CardID AND AccessNodes.CardID = '$CardID'");
    while($row = mysqli_fetch_array($result)) 
    {
-    echo "<form action=\"log.php\" method=\"post\">";
+    echo "<form action=\"" . $_SERVER['SCRIPT_NAME'] . "\" method=\"post\">";
     echo "<tr>";
     echo "<td>" . $row['NodeName'] . "</td>";
     echo "<td>" . $row['Location'] . "</td>";
