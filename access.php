@@ -34,25 +34,35 @@ elseif(isset($_GET['edit']) && !empty($_GET['edit']))
    $CardID = $row['CardID'];
    echo "<a href=" . $_SERVER['SCRIPT_NAME'] . ">Home</a>";
    echo "<form action=\"" . $_SERVER['SCRIPT_NAME'] . "\" method=\"post\">";
-   echo "Card ID: <input type=\"text\" name=\"CardID\" value=\"" . $row['CardID'] . "\">";
-   echo "Name: <input type=\"text\" name=\"Name\" value=\"" . $row['Name'] . "\">";
-   echo "Email: <input type=\"text\" name=\"email\" value=\"" . $row['email'] . "\">";
-   echo "Tone: <input type=\"text\" name=\"Tone\" value=\"" . $row['Tone'] . "\">";
-   echo "<input type=\"submit\" value=\"Update\">";
+   echo "<style type=\"text/css\">";
+   echo "tbody tr:nth-child(odd){ background-color:#ccc; }";
+   echo "</style>";
+   echo "<table width=600px border=0><tr><td>CardID</td><td>Name</td><td>Email</td><td>Tone</td><td></td></tr>";
+   echo "<tr>";
+   echo "<td><input type=\"text\" name=\"CardID\" value=\"" . $row['CardID'] . "\"></td>";
+   echo "<td><input type=\"text\" name=\"Name\" value=\"" . $row['Name'] . "\"></td>";
+   echo "<td><input type=\"text\" name=\"email\" value=\"" . $row['email'] . "\"></td>";
+   echo "<td><input type=\"text\" name=\"Tone\" value=\"" . $row['Tone'] . "\"></td>";
+   echo "<td><input type=\"submit\" value=\"Update\"></td></tr>";
+   echo "</table>";
    echo "</form>";
    echo "<br>";
   }
-  echo "<table border=1><tr><td>NodeName</td><td>Location</td><td>12AM</td>";
+  echo "<style type=\"text/css\">";
+  echo "tbody tr:nth-child(odd){ background-color:#ccc; }";
+  echo "</style>";
+  echo "<table width=600px border=0><tr bgcolor=lightgray><td></td><td></td><td align=center colspan=12>AM</td><td align=center colspan=12>PM</td><td></td>";
+  echo "<tr bgcolor=lightgray><td>NodeName</td><td>Location</td><td>12</td>";
    for ($x=1; $x<=11; $x++)
    {
-    echo "<td>" . $x . "AM</td>";
+    echo "<td align=center>" . $x . "</td>";
    }
-   echo "<td>12PM</td>";
+   echo "<td align=center>12</td>";
    for ($x=1; $x<=11; $x++)
    {
-    echo "<td>" . $x . "PM</td>";
+    echo "<td align=center>" . $x . "</td>";
    }
-   echo "</tr>";
+   echo "<td></td></tr>";
    $result = mysqli_query($con,"SELECT * FROM AccessNodes, AccessCards WHERE AccessNodes.CardID = AccessCards.CardID AND AccessNodes.CardID = '$CardID'");
    while($row = mysqli_fetch_array($result)) 
    {
@@ -117,10 +127,37 @@ else
   {$result = mysqli_query($con,"SELECT * FROM EntryLog, AccessCards WHERE EntryLog.CardID = AccessCards.CardID ORDER BY Timestamp DESC LIMIT {$start},{$limit}");}
 
 echo "<style type=\"text/css\">";
+echo ".center
+{
+	margin:auto;
+	width:600px;
+}";
+
 echo "tbody tr:nth-child(odd){ background-color:#ccc; }";
+echo "div
+{
+	width:600px;
+	height:575px;
+	border:2px solid #000000;
+	background-color:F5F5F5;
+	background-clip:content-box;
+}";
+echo "div#box
+{
+	width:600px;
+	height:20px;
+	background-color:gray;
+	background-clip:content-box;
+}";
 echo "</style>";
-echo "<a href=" . $_SERVER['SCRIPT_NAME'] . ">Home</a>";
-echo "<table border='0'>
+echo "<div id=\"box\" class=center></div>";
+echo "<div class=center>";
+echo "<center>";
+echo "<table width=500px border='0'>
+<tr></tr>
+<tr><td><a href=" . $_SERVER['SCRIPT_NAME'] . ">Home</a></td>";
+echo "</td><td></td></tr></table>";
+echo "<table width=500px border='0'>
 <tr>
 <th>Node Name</th>
 <th>Timestamp</th>
@@ -134,7 +171,7 @@ while($row = mysqli_fetch_array($result))
   echo "<td>" . $row['NodeName'] . "</td>";
   echo "<td>" . $row['Timestamp'] . "</td>";
   echo "<td><a href=" . $_SERVER['SCRIPT_NAME'] . "?name=" . urlencode($row['Name']) . ">" . $row['Name'] . "</a><a href=" . $_SERVER['SCRIPT_NAME'] . "?edit=" . urlencode($row['Name']) . "><img align=right src=edit.png></img></a></td>";
-  echo "<td>" . $row['Result'] . "</td>";
+  echo "<td align=center>" . $row['Result'] . "</td>";
   echo "</tr>";
   }
 if($page == "0")
@@ -155,5 +192,6 @@ if($page < $page_count)
 else
  {echo "<td>&nbsp</td>"; } 
 echo "</table>";
+echo "</div>";
 mysqli_close($con);
 ?>
